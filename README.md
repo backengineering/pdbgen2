@@ -1,4 +1,4 @@
-# pdbgen
+# pdbgen2
 
 Generate a PDB file given the old PDB file and an address mapping file generated from CodeDefender. Not every tool that parses PDB files supports [PDB OMAP](https://github.com/getsentry/pdb/issues/17) therefore partial reconstruction of the PDB is required to support all tools (`IDA`, `WinDbg`, `x64dbg`, `Visual Studios`).
 
@@ -13,3 +13,8 @@ This will generate cmake `build` folder. You can then go into `build/` and open 
 ```
 cmake -B build
 ```
+
+## Credits
+
+- [PdbGen](https://github.com/gix/PdbGen)
+- [llvm-docs](https://llvm.org/docs/PDB/index.html)
