@@ -29,48 +29,139 @@ project(pdbgen2
 		0.1.0
 )
 
-# Target: myexecutable
-set(CMKR_TARGET myexecutable)
+# Target: pdbgen2
+set(CMKR_TARGET pdbgen2)
 include(FetchContent)
-Set(FETCHCONTENT_QUIET FALSE)
+set(FETCHCONTENT_QUIET FALSE)
 
-FetchContent_Declare(
-    llvm
-    GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-    GIT_TAG llvmorg-18.1.6
-    GIT_PROGRESS TRUE
-)
-FetchContent_MakeAvailable(llvm)
-find_package(LLVM REQUIRED CONFIG)
+# Define LLVM install directory
+set(LLVM_INSTALL_DIR ${CMAKE_BINARY_DIR}/llvm-install)
 
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+# Check if LLVM is already installed
+if(EXISTS ${LLVM_INSTALL_DIR})
+    message(STATUS "LLVM is already installed in ${LLVM_INSTALL_DIR}, skipping build.")
+else()
+    message(STATUS "LLVM not found, proceeding with download and build...")
 
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
-llvm_map_components_to_libnames(llvm_libs debuginfopdb)
+    # Fetch LLVM project
+    FetchContent_Declare(
+        llvm-project
+        GIT_REPOSITORY https://github.com/llvm/llvm-project.git
+        GIT_TAG llvmorg-18.1.6
+        GIT_PROGRESS TRUE
+    )
+    FetchContent_MakeAvailable(llvm-project)
 
-set(myexecutable_SOURCES
+    # Set up LLVM build directory
+    set(LLVM_BUILD_DIR ${CMAKE_BINARY_DIR}/llvm-build)
+    message(STATUS "LLVM Build Directory: ${LLVM_BUILD_DIR}")
+    message(STATUS "LLVM Install Directory: ${LLVM_INSTALL_DIR}")
+
+    # Configure LLVM build options
+    message(STATUS "Configuring LLVM build options...")
+    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR})
+    set(LLVM_ENABLE_ASSERTIONS OFF)
+    set(LLVM_TARGETS_TO_BUILD X86)  # Build only X86 target
+    message(STATUS "LLVM build options configured.")
+
+    # Run CMake configuration for LLVM
+    message(STATUS "Running CMake configuration for LLVM...")
+    execute_process(
+        COMMAND cmake -S ${llvm-project_SOURCE_DIR}/llvm -B ${LLVM_BUILD_DIR} 
+            -DCMAKE_BUILD_TYPE=Release 
+            -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR} 
+            -DLLVM_ENABLE_ASSERTIONS=OFF 
+            -DLLVM_TARGETS_TO_BUILD=X86
+            -DLLVM_ENABLE_PROJECTS=clang
+        RESULT_VARIABLE config_result
+        OUTPUT_VARIABLE config_output
+        ERROR_VARIABLE config_error
+    )
+
+    if(config_result)
+        message(FATAL_ERROR "LLVM configuration failed: ${config_error}")
+    else()
+        message(STATUS "LLVM configured successfully.")
+    endif()
+
+    # Build LLVM
+    message(STATUS "Starting LLVM build process...")
+    execute_process(
+        COMMAND cmake --build ${LLVM_BUILD_DIR} --config Release -j24
+        RESULT_VARIABLE build_result
+        OUTPUT_VARIABLE build_output
+        ERROR_VARIABLE build_error
+    )
+
+    if(build_result)
+        message(FATAL_ERROR "LLVM build failed: ${build_error}")
+    else()
+        message(STATUS "LLVM built successfully.")
+    endif()
+
+    # Install LLVM
+    message(STATUS "Installing LLVM to ${LLVM_INSTALL_DIR}...")
+    execute_process(
+        COMMAND cmake --install ${LLVM_BUILD_DIR}
+        RESULT_VARIABLE install_result
+        OUTPUT_VARIABLE install_output
+        ERROR_VARIABLE install_error
+    )
+
+    if(install_result)
+        message(FATAL_ERROR "LLVM install failed: ${install_error}")
+    else()
+        message(STATUS "LLVM installed successfully.")
+    endif()
+
+    message(STATUS "LLVM setup complete.")
+endif()
+
+set(pdbgen2_SOURCES
 	cmake.toml
 	"src/main.cpp"
 )
 
-add_executable(myexecutable)
+add_executable(pdbgen2)
 
-target_sources(myexecutable PRIVATE ${myexecutable_SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${myexecutable_SOURCES})
+target_sources(pdbgen2 PRIVATE ${pdbgen2_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${pdbgen2_SOURCES})
 
-target_compile_features(myexecutable PRIVATE
+target_compile_features(pdbgen2 PRIVATE
 	cxx_std_17
 )
 
-target_include_directories(myexecutable PRIVATE
+target_include_directories(pdbgen2 PRIVATE
 	include
+)
+
+target_link_libraries(pdbgen2 PRIVATE
+	LLVMBinaryFormat
+	LLVMDebugInfoCodeView
+	LLVMDebugInfoMSF
+	LLVMDebugInfoPDB
+	LLVMObject
+	LLVMObjectYAML
+	LLVMSupport
+	LLVMIRReader
+	LLVMBitReader
+	LLVMAsmParser
+	LLVMCore
+	LLVMRemarks
+	LLVMBitstreamReader
+	LLVMMCParser
+	LLVMTextAPI
+	LLVMMC
+	LLVMTargetParser
+	LLVMDemangle
+	Ws2_32
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT myexecutable)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT pdbgen2)
 endif()
 
-target_link_libraries(pdbgen2 ${llvm_libs})
+target_link_directories(pdbgen2 PRIVATE ${LLVM_INSTALL_DIR}/lib)
+target_include_directories(pdbgen2 PRIVATE ${LLVM_INSTALL_DIR}/include)
