@@ -20,6 +20,7 @@
 
 #include <charconv>
 #include <fstream>
+#include <Windows.h>
 
 int main(int argc, char **argv) {
   llvm::ExitOnError ExitOnErr;
@@ -52,17 +53,37 @@ int main(int argc, char **argv) {
   dbiBuilder.setPdbDllRbld(1);
   dbiBuilder.setPdbDllVersion(1);
   dbiBuilder.setVersionHeader(llvm::pdb::PdbDbiV70);
-  // dbiBuilder.createSectionMap(moduleInfo.sections);
 
-  //ExitOnErr(dbiBuilder.addDbgStream(
-  //    llvm::pdb::DbgHeaderType::SectionHdr,
-  //    {reinterpret_cast<uint8_t const *>(moduleInfo.sections.data()),
-  //     moduleInfo.sections.size() * sizeof(moduleInfo.sections[0])}));
+  std::vector<llvm::object::coff_section> sections;
+  llvm::object::coff_section section;
+  section.VirtualAddress = 0x1000;
+  section.VirtualSize = 0x1000;
+  section.SizeOfRawData = 0x1000;
+  section.Characteristics = IMAGE_SCN_MEM_EXECUTE;
+  sections.push_back(section);
+  dbiBuilder.createSectionMap(sections);
+
+  std::uint8_t *start = (std::uint8_t *)sections.data();
+  std::uint8_t *end = (std::uint8_t *)start +
+                      sections.size() * sizeof(llvm::object::coff_section);
+
+  std::vector<std::uint8_t> bytes(start, end);
+  llvm::ArrayRef<uint8_t> data(bytes);
+
+  ExitOnErr(
+      dbiBuilder.addDbgStream(llvm::pdb::DbgHeaderType::SectionHdr, data));
 
   auto &modiBuilder = ExitOnErr(dbiBuilder.addModuleInfo("fake-pdb.obj"));
   modiBuilder.setObjFileName("fake-pdb.obj");
   auto &gsiBuilder = builder.getGsiBuilder();
 
+  llvm::pdb::BulkPublic sym;
+  sym.Name = "HelloWorldTestFunction";
+  sym.Offset = 0x1000;
+  sym.Segment = 1;
+  sym.setFlags(llvm::codeview::PublicSymFlags::Function);
+
+  gsiBuilder.addPublicSymbols({sym});
   auto &tpiBuilder = builder.getTpiBuilder();
   tpiBuilder.setVersionHeader(llvm::pdb::PdbTpiV80);
 
@@ -72,6 +93,7 @@ int main(int argc, char **argv) {
   llvm::codeview::StringsAndChecksums strings;
   strings.setStrings(
       std::make_shared<llvm::codeview::DebugStringTableSubsection>());
+
   strings.strings()->insert("");
   builder.getStringTableBuilder().setStrings(*strings.strings());
 

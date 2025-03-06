@@ -8,7 +8,7 @@ You can download a pre-compiled version of this project instead of having to bui
 
 ## Building
 
-This will generate cmake `build` folder. You can then go into `build/` and open `pdbgen2.sln`.
+This will generate cmake `build` folder. You can then go into `build/` and open `pdbgen2.sln`. You need to have `Visual Studios 2022` installed. It will take upwards of 30 minutes to configure, build, and install llvm.
 
 ```
 cmake -B build
