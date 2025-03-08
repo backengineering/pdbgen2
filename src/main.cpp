@@ -1,102 +1,64 @@
-#pragma warning(push)
-#pragma warning(disable : 4141)
-#pragma warning(disable : 4146)
-#pragma warning(disable : 4244)
-#pragma warning(disable : 4267)
-#pragma warning(disable : 4996)
 #include <llvm/DebugInfo/CodeView/StringsAndChecksums.h>
 #include <llvm/DebugInfo/CodeView/SymbolRecord.h>
 #include <llvm/DebugInfo/MSF/MSFBuilder.h>
+#include <llvm/DebugInfo/PDB/IPDBSession.h>
 #include <llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h>
+#include <llvm/DebugInfo/PDB/Native/DbiStream.h>
 #include <llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h>
 #include <llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h>
+#include <llvm/DebugInfo/PDB/Native/InfoStream.h>
 #include <llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h>
+#include <llvm/DebugInfo/PDB/Native/NativeSession.h>
+#include <llvm/DebugInfo/PDB/Native/PDBFile.h>
 #include <llvm/DebugInfo/PDB/Native/PDBFileBuilder.h>
 #include <llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h>
+#include <llvm/DebugInfo/PDB/PDB.h>
 #include <llvm/Object/Binary.h>
 #include <llvm/Object/COFF.h>
 #include <llvm/Support/Allocator.h>
-#pragma warning(pop)
 
+#include <Windows.h>
 #include <charconv>
 #include <fstream>
-#include <Windows.h>
+
+using namespace llvm::pdb;
 
 int main(int argc, char **argv) {
   llvm::ExitOnError ExitOnErr;
   llvm::BumpPtrAllocator alloc;
   llvm::pdb::PDBFileBuilder builder(alloc);
 
-  uint32_t const blockSize = 4096;
-  ExitOnErr(builder.initialize(blockSize));
-
   // Add each of the reserved streams.  We might not put any data in them,
   // but at least they have to be present.
   for (uint32_t i = 0; i < llvm::pdb::kSpecialStreamCount; ++i)
     ExitOnErr(builder.getMsfBuilder().addStream(0));
 
-  auto &infoBuilder = builder.getInfoBuilder();
+  // Read the file off the disk and create a PDBFile.
+  std::unique_ptr<IPDBSession> session;
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, argv[1], session));
+  NativeSession *NS = static_cast<NativeSession *>(session.get());
+  auto &pdb = NS->getPDBFile();
 
-  infoBuilder.setAge(1);
-  llvm::codeview::GUID guid;
+  ExitOnErr(builder.initialize(pdb.getBlockSize()));
+  InfoStream &info = pdb.getPDBInfoStream().get();
+  InfoStreamBuilder &infoBuilder = builder.getInfoBuilder();
 
-  infoBuilder.setGuid(guid);
-  infoBuilder.setSignature(1);
-  infoBuilder.setVersion(llvm::pdb::PdbImplVC70);
+  infoBuilder.setVersion(info.getVersion());
+  infoBuilder.setSignature(info.getSignature());
+  infoBuilder.setAge(info.getAge());
+  infoBuilder.setGuid(info.getGuid());
   infoBuilder.addFeature(llvm::pdb::PdbRaw_FeatureSig::VC140);
 
-  auto &dbiBuilder = builder.getDbiBuilder();
-  dbiBuilder.setAge(1);
-  dbiBuilder.setBuildNumber(35584);
-  dbiBuilder.setFlags(2);
-  dbiBuilder.setMachineType(llvm::pdb::PDB_Machine::Amd64);
+  DbiStream &dbi = pdb.getPDBDbiStream().get();
+  DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
+
+  dbiBuilder.setAge(dbi.getAge());
+  dbiBuilder.setBuildNumber(dbi.getBuildNumber());
+  dbiBuilder.setFlags(dbi.getFlags());
+  dbiBuilder.setMachineType(dbi.getMachineType());
   dbiBuilder.setPdbDllRbld(1);
   dbiBuilder.setPdbDllVersion(1);
-  dbiBuilder.setVersionHeader(llvm::pdb::PdbDbiV70);
+  dbiBuilder.setVersionHeader(PdbDbiV70);
 
-  std::vector<llvm::object::coff_section> sections;
-  llvm::object::coff_section section;
-  section.VirtualAddress = 0x1000;
-  section.VirtualSize = 0x1000;
-  section.SizeOfRawData = 0x1000;
-  section.Characteristics = IMAGE_SCN_MEM_EXECUTE;
-  sections.push_back(section);
-  dbiBuilder.createSectionMap(sections);
-
-  std::uint8_t *start = (std::uint8_t *)sections.data();
-  std::uint8_t *end = (std::uint8_t *)start +
-                      sections.size() * sizeof(llvm::object::coff_section);
-
-  std::vector<std::uint8_t> bytes(start, end);
-  llvm::ArrayRef<uint8_t> data(bytes);
-
-  ExitOnErr(
-      dbiBuilder.addDbgStream(llvm::pdb::DbgHeaderType::SectionHdr, data));
-
-  auto &modiBuilder = ExitOnErr(dbiBuilder.addModuleInfo("fake-pdb.obj"));
-  modiBuilder.setObjFileName("fake-pdb.obj");
-  auto &gsiBuilder = builder.getGsiBuilder();
-
-  llvm::pdb::BulkPublic sym;
-  sym.Name = "HelloWorldTestFunction";
-  sym.Offset = 0x1000;
-  sym.Segment = 1;
-  sym.setFlags(llvm::codeview::PublicSymFlags::Function);
-
-  gsiBuilder.addPublicSymbols({sym});
-  auto &tpiBuilder = builder.getTpiBuilder();
-  tpiBuilder.setVersionHeader(llvm::pdb::PdbTpiV80);
-
-  auto &ipiBuilder = builder.getIpiBuilder();
-  ipiBuilder.setVersionHeader(llvm::pdb::PdbTpiV80);
-
-  llvm::codeview::StringsAndChecksums strings;
-  strings.setStrings(
-      std::make_shared<llvm::codeview::DebugStringTableSubsection>());
-
-  strings.strings()->insert("");
-  builder.getStringTableBuilder().setStrings(*strings.strings());
-
-  dbiBuilder.setPublicsStreamIndex(gsiBuilder.getPublicsStreamIndex());
-  ExitOnErr(builder.commit("output.pdb", &infoBuilder.getGuid()));
+  GSIStreamBuilder &gsiBuilder = builder.getGsiBuilder();
 }
