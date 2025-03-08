@@ -34,6 +34,8 @@ set(CMKR_TARGET pdbgen2)
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
+option(LLVM_BUILD_TYPE "Build type for LLVM (Release or Debug)" Release)
+
 # Define LLVM install directory
 set(LLVM_INSTALL_DIR ${CMAKE_BINARY_DIR}/llvm-install)
 
@@ -57,19 +59,11 @@ else()
     message(STATUS "LLVM Build Directory: ${LLVM_BUILD_DIR}")
     message(STATUS "LLVM Install Directory: ${LLVM_INSTALL_DIR}")
 
-    # Configure LLVM build options
-    message(STATUS "Configuring LLVM build options...")
-    set(CMAKE_BUILD_TYPE Release)
-    set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR})
-    set(LLVM_ENABLE_ASSERTIONS OFF)
-    set(LLVM_TARGETS_TO_BUILD X86)  # Build only X86 target
-    message(STATUS "LLVM build options configured.")
-
     # Run CMake configuration for LLVM
     message(STATUS "Running CMake configuration for LLVM...")
     execute_process(
         COMMAND cmake -S ${llvm-project_SOURCE_DIR}/llvm -B ${LLVM_BUILD_DIR} 
-            -DCMAKE_BUILD_TYPE=Release 
+            -DCMAKE_CONFIGURATION_TYPES=${LLVM_BUILD_TYPE}
             -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR} 
             -DLLVM_ENABLE_ASSERTIONS=OFF 
             -DLLVM_TARGETS_TO_BUILD=X86
@@ -88,7 +82,7 @@ else()
     # Build LLVM
     message(STATUS "Starting LLVM build process...")
     execute_process(
-        COMMAND cmake --build ${LLVM_BUILD_DIR} --config Release -j24
+        COMMAND cmake --build ${LLVM_BUILD_DIR} --config ${LLVM_BUILD_TYPE} -j24
         RESULT_VARIABLE build_result
         OUTPUT_VARIABLE build_output
         ERROR_VARIABLE build_error
