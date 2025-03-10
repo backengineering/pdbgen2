@@ -1,7 +1,7 @@
 <div align="center">
     <img src="https://media1.giphy.com/media/FovFeej5SQQh94uyyK/giphy.gif"/>
     <br>
-    <i>LLVM takes forever to build and a few GB's of cache space in tmp...</i>
+    <i>Me waiting for LLVM to finishing building^^</i>
 </div>
 
 <br>
