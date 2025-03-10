@@ -1,10 +1,9 @@
-# pdbgen2
-
 <div align="center">
     <img src="https://media1.giphy.com/media/FovFeej5SQQh94uyyK/giphy.gif"/>
     <br>
     <i>LLVM takes forever to build and a few GB's of cache space in tmp...</i>
 </div>
+
 
 Generate a PDB file given the old PDB file and an address mapping file generated from CodeDefender. Not every tool that parses PDB files supports [PDB OMAP](https://github.com/getsentry/pdb/issues/17) therefore partial reconstruction of the PDB is required to support all tools (`IDA`, `WinDbg`, `x64dbg`, `Visual Studios`).
 
