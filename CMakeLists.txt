@@ -49,7 +49,7 @@ else()
     FetchContent_Declare(
         llvm-project
         GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-        GIT_TAG llvmorg-18.1.6
+        GIT_TAG llvmorg-10.0.0
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(llvm-project)
@@ -65,12 +65,28 @@ else()
         COMMAND cmake -S ${llvm-project_SOURCE_DIR}/llvm -B ${LLVM_BUILD_DIR} 
             -DCMAKE_CONFIGURATION_TYPES=${LLVM_BUILD_TYPE}
             -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR} 
-            -DLLVM_ENABLE_ASSERTIONS=OFF 
-            -DLLVM_TARGETS_TO_BUILD=X86
-            -DLLVM_ENABLE_PROJECTS=clang
-        RESULT_VARIABLE config_result
-        OUTPUT_VARIABLE config_output
-        ERROR_VARIABLE config_error
+            -DLLVM_BUILD_LLVM_C_DYLIB=OFF
+            -DLLVM_BUILD_RUNTIME=OFF
+            -DLLVM_BUILD_RUNTIMES=OFF
+            -DLLVM_BUILD_TOOLS=OFF
+            -DLLVM_BUILD_UTILS=OFF
+            -DLLVM_ENABLE_BACKTRACES=OFF
+            -DLLVM_ENABLE_BINDINGS=OFF
+            -DLLVM_ENABLE_CRASH_OVERRIDES=OFF
+            -DLLVM_ENABLE_OCAMLDOC=OFF
+            -DLLVM_ENABLE_PDB=ON
+            -DLLVM_INCLUDE_BENCHMARKS=OFF
+            -DLLVM_INCLUDE_DOCS=OFF
+            -DLLVM_INCLUDE_EXAMPLES=OFF
+            -DLLVM_INCLUDE_GO_TESTS=OFF
+            -DLLVM_INCLUDE_RUNTIMES=OFF
+            -DLLVM_INCLUDE_TESTS=OFF
+            -DLLVM_INCLUDE_TOOLS=OFF
+            -DLLVM_INCLUDE_UTILS=OFF
+            -DLLVM_TARGETS_TO_BUILD=""
+            RESULT_VARIABLE config_result
+            OUTPUT_VARIABLE config_output
+            ERROR_VARIABLE config_error
     )
 
     if(config_result)
