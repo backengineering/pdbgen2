@@ -131,7 +131,9 @@ endif()
 
 set(pdbgen2_SOURCES
 	cmake.toml
+	"include/utils.h"
 	"src/main.cpp"
+	"src/utils.cpp"
 )
 
 add_executable(pdbgen2)

@@ -4,7 +4,7 @@ version = "0.1.0"
 
 [target.pdbgen2]
 type = "executable"
-sources = ["src/**.cpp", "include/**.hpp"]
+sources = ["src/**.cpp", "include/**.hpp", "include/**.h"]
 include-directories = ["include"]
 compile-features = ["cxx_std_17"]
 link-libraries = [
