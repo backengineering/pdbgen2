@@ -1,4 +1,32 @@
+// Copyright (C) Back Engineering Labs, Inc. - All Rights Reserved
+//
+
 #include <utils.h>
+
+llvm::Expected<std::uint32_t>
+sectionOffsetToRVA(std::uint32_t sectionNumber, std::uint32_t sectionOffset,
+    const std::vector<llvm::object::coff_section>& sections) {
+  if (sectionNumber > static_cast<int>(sections.size())) {
+    return llvm::make_error<llvm::StringError>("Invalid section number",
+                                               llvm::inconvertibleErrorCode());
+  }
+  const auto &section = sections[sectionNumber - 1];
+  return section.VirtualAddress + sectionOffset;
+}
+
+bool isAddressInRange(const std::vector<Entry> &entries,
+                      uint32_t targetAddress) {
+  auto it = std::lower_bound(entries.begin(), entries.end(), targetAddress,
+                             [](const Entry &entry, uint32_t address) {
+                               return entry.rangeStart < address;
+                             });
+
+  if (it != entries.end() && it->rangeStart <= targetAddress &&
+      targetAddress <= it->rangeEnd) {
+    return true;
+  }
+  return false;
+}
 
 std::vector<Entry> parseEntriesFromFile(const std::string &filePath) {
   std::vector<Entry> entries;
@@ -24,6 +52,11 @@ std::vector<Entry> parseEntriesFromFile(const std::string &filePath) {
       entries.push_back(entry);
     }
   }
+
+  // Sort the entries by rangeStart to allow binary search
+  std::sort(entries.begin(), entries.end(), [](const Entry &a, const Entry &b) {
+    return a.rangeStart < b.rangeStart;
+  });
 
   return entries;
 }

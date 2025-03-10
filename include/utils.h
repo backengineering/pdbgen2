@@ -1,9 +1,9 @@
 // Copyright (C) Back Engineering Labs, Inc. - All Rights Reserved
 //
 
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
+#include <llvm/DebugInfo/CodeView/SymbolDeserializer.h>
 #include <llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h>
 #include <llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h>
 #include <llvm/DebugInfo/CodeView/StringsAndChecksums.h>
@@ -39,8 +39,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 struct ModuleInfo {
   std::vector<llvm::object::coff_section> sections;
@@ -69,4 +69,9 @@ llvm::Expected<SectionAndOffset>
 rvaToSectionAndOffset(std::uint32_t rva,
                       const std::vector<llvm::object::coff_section> &sections);
 
-#endif // UTILS_H
+bool isAddressInRange(const std::vector<Entry> &entries,
+                      uint32_t targetAddress);
+
+llvm::Expected<std::uint32_t>
+sectionOffsetToRVA(std::uint32_t sectionNumber, std::uint32_t sectionOffset,
+                   const std::vector<llvm::object::coff_section> &sections);
