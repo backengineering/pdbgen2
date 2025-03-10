@@ -1,11 +1,3 @@
-<div align="center">
-    <img src="https://media1.giphy.com/media/FovFeej5SQQh94uyyK/giphy.gif"/>
-    <br>
-    <i>Me waiting for LLVM to finishing building^^</i>
-</div>
-
-<br>
-
 Generate a PDB file given the old PDB file and an address mapping file generated from CodeDefender. Not every tool that parses PDB files supports [PDB OMAP](https://github.com/getsentry/pdb/issues/17) therefore partial reconstruction of the PDB is required to support all tools (`IDA`, `WinDbg`, `x64dbg`, `Visual Studios`).
 
 ## Example
