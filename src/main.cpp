@@ -50,10 +50,6 @@ static cl::opt<std::string>
                  cl::Required);
 
 static cl::opt<std::string>
-    MapFile("map", cl::desc("Path to the generated map file from CodeDefender"),
-            cl::Required);
-
-static cl::opt<std::string>
     OutputPDB("out-pdb", cl::desc("Path to the output PDB file"), cl::Required);
 
 // https://github.com/gix/PdbGen/blob/568d23b671eda39d7bc562e511e8dda4b18aa18b/Main.cpp#L37
@@ -146,18 +142,25 @@ int main(int argc, char **argv) {
        sections.size() * sizeof(sections[0])}));
 
   auto &modiBuilder =
-      ExitOnErr(dbiBuilder.addModuleInfo("C:\\CodeDefender.obj"));
-  modiBuilder.setObjFileName("C:\\CodeDefender.obj");
+      ExitOnErr(dbiBuilder.addModuleInfo("CodeDefender"));
+
+  modiBuilder.setObjFileName("CodeDefender.obj");
   auto &gsiBuilder = builder.getGsiBuilder();
 
-  ProcSym proc = ProcSym(SymbolRecordKind::GlobalProcSym);
-  proc.Name = "HelloWorldTest";
-  proc.Segment = 0;
-  proc.CodeOffset = 0;
-  proc.CodeSize = 5;
+  BulkPublic pub;
+  pub.Name = "HelloWorldTest";
+  pub.NameLen = sizeof("HelloWorldTest");
+  pub.Segment = 1;
+  pub.Offset = 0x1000;
+  pub.setFlags(PublicSymFlags::Function);
 
-  modiBuilder.addSymbol(
-      SymbolSerializer::writeOneSymbol(proc, alloc, CodeViewContainer::Pdb));
+  BulkPublic pub2;
+  pub2.Name = "HelloWorldTest2";
+  pub2.NameLen = sizeof("HelloWorldTest2");
+  pub2.Segment = 1;
+  pub2.Offset = 0x1080;
+  pub2.setFlags(PublicSymFlags::Function);
+  gsiBuilder.addPublicSymbols({pub, pub2});
 
   codeview::GUID ignored;
   ExitOnErr(builder.commit(OutputPDB, &ignored));

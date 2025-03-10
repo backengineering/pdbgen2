@@ -33,7 +33,6 @@ project(pdbgen2
 set(CMKR_TARGET pdbgen2)
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
-
 option(LLVM_BUILD_TYPE "Build type for LLVM (Release or Debug)" Release)
 
 # Define LLVM install directory
@@ -49,7 +48,7 @@ else()
     FetchContent_Declare(
         llvm-project
         GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-        GIT_TAG llvmorg-10.0.0
+        GIT_TAG llvmorg-20.1.0
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(llvm-project)
@@ -64,7 +63,10 @@ else()
     execute_process(
         COMMAND cmake -S ${llvm-project_SOURCE_DIR}/llvm -B ${LLVM_BUILD_DIR} 
             -DCMAKE_CONFIGURATION_TYPES=${LLVM_BUILD_TYPE}
+            -DCMAKE_BUILD_TYPE=${LLVM_BUILD_TYPE}
             -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR} 
+            -DLLVM_TARGETS_TO_BUILD=X86
+            -DLLVM_ENABLE_PROJECTS=clang
             -DLLVM_BUILD_LLVM_C_DYLIB=OFF
             -DLLVM_BUILD_RUNTIME=OFF
             -DLLVM_BUILD_RUNTIMES=OFF
@@ -83,8 +85,6 @@ else()
             -DLLVM_INCLUDE_TESTS=OFF
             -DLLVM_INCLUDE_TOOLS=OFF
             -DLLVM_INCLUDE_UTILS=OFF
-            -DLLVM_TARGETS_TO_BUILD=X86
-            -DLLVM_ENABLE_PROJECTS=clang
             RESULT_VARIABLE config_result
             OUTPUT_VARIABLE config_output
             ERROR_VARIABLE config_error
@@ -167,6 +167,7 @@ target_link_libraries(pdbgen2 PRIVATE
 	LLVMTargetParser
 	LLVMDemangle
 	Ws2_32
+	ntdll
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
